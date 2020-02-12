@@ -1,21 +1,42 @@
 import React, { Component } from "react";
-import logo from "./assets/logo.svg";
-import nearlogo from "./assets/gray_near_logo.svg";
-import near from "./assets/near.svg";
 import "./App.css";
+import Modal from 'react-modal';
+import LoadingOverlay from 'react-loading-overlay';
+import nearcat from './assets/nearcat.png';
+import SquareLoader from 'react-spinners/SquareLoader'
+
+Modal.setAppElement('#root');
+
+const customStyles = {
+  content : {
+    top                   : '50%',
+    left                  : '50%',
+    right                 : 'auto',
+    bottom                : 'auto',
+    marginRight           : '-47%',
+    transform             : 'translate(-50%, -50%)'
+  }
+};
 
 class App extends Component {
+
   constructor(props) {
     super(props);
     this.state = {
       login: false,
-      speech: null
+      speech: null,
+      modalIsOpen: false,
+      isLoading: false,
+      completedFinalStep: false
     };
     this.signedInFlow = this.signedInFlow.bind(this);
     this.requestSignIn = this.requestSignIn.bind(this);
     this.requestSignOut = this.requestSignOut.bind(this);
     this.signedOutFlow = this.signedOutFlow.bind(this);
     this.joinNear = this.joinNear.bind(this);
+    this.openModal = this.openModal.bind(this);
+    this.afterOpenModal = this.afterOpenModal.bind(this);
+    this.closeModal = this.closeModal.bind(this);    
   }
 
   componentDidMount() {
@@ -26,6 +47,21 @@ class App extends Component {
       this.signedOutFlow();
     }
   }
+
+  openModal() {
+    this.setState({
+      modalIsOpen: true,
+      isLoading: false
+    });
+  }
+
+  afterOpenModal() {
+    // references are now sync'd and can be accessed.
+  }
+
+  closeModal() {
+    this.setState({modalIsOpen: false});
+  }  
 
   async signedInFlow() {
     console.log("come in sign in flow");
@@ -38,13 +74,10 @@ class App extends Component {
         window.location.origin + window.location.pathname
       );
     }
-    this.props.contract
-      .welcome({ name: accountId })
-      .then(response => this.setState({ speech: response.text }));
   }
 
   async requestSignIn() {
-    const appTitle = "NEAR Jankcity";
+    const appTitle = "NEAR Protocol Booth";
     await this.props.wallet.requestSignIn(
       window.nearConfig.contractName,
       appTitle
@@ -63,6 +96,7 @@ class App extends Component {
         window.location.origin + window.location.pathname
       );
     }
+    localStorage.clear();
     this.setState({
       login: false,
       speech: null
@@ -70,83 +104,101 @@ class App extends Component {
   }
 
   async joinNear() {
-    const q = await this.props.contract.incrementParticipation();
-    alert("You have joined! Stay tuned!");
+    this.setState({
+      isLoading: true,
+      completedFinalStep: true
+    });
+    
+    await this.props.contract.incrementParticipation();
+    this.openModal();
   }
 
+  // AdjustIframeHeightOnLoad() {
+  //   document.getElementById("gform-iframe").style.height = document.getElementById("gform-iframe").contentWindow.document.body.scrollHeight + "px";
+  // }
+
   render() {
-    let style = {
-      fontSize: "1.5rem",
-      color: "#0072CE",
-      textShadow: "1px 1px #D1CCBD"
-    };
     return (
       <div className="App-header">
         <div className="image-wrapper">
-          {/*<img className="logo" src={nearlogo} alt="NEAR logo" />*/}
-          {/*<h2>hmm</h2>*/}
           <div className={"hackathon-text"}>
-            <p>
-              NEAR protocol is a new blockchain focused on developer
-              productivity and useability! In this demonstration we're going to
-              interact with the blockchain and see a live change on the
-              projector.
-            </p>
-            <p>
-              <b>So what's going to happen?</b>
-            </p>
-            <p>
-              You will login to your new, handy-dandy NEAR account. We keep
-              track of the number of participants who log in and update a simple
-              value on the blockchain.
-            </p>
-            <p>
-              <strong>How do you store this info?</strong>
-            </p>
-            <p>
-              I'm glad you asked, for this demonstration we used AssemblyScript,
-              but you can also use Rust.
-            </p>
-            <p>
-              <strong>Tell me more!</strong>
-            </p>
-            <p>Sure, grab one of us at the booth, we'd love to chat!</p>
-          </div>
-          <div>
+            <LoadingOverlay
+              wrapper={"#root"}
+              active={this.state.isLoading}
+              spinner={<SquareLoader color={"#FF585D"}/>}
+              text="Calling smart contract…"
+              classNamePrefix={"near-booth-"}
+            >
             {this.state.login ? (
-              <button onClick={this.joinNear}>Join NEAR!</button>
+              <div className={"logged-in"}>
+                <p>
+                  Welcome back! Now we're going to interact with the blockchain calling a simple smart contract.
+                </p>
+                <p>
+                  <strong>How was this smart contract written?</strong>
+                </p>
+                <p>
+                  For this demonstration we used AssemblyScript, but you can also use Rust. We generally prefer Rust, actually.
+                </p>
+                <p>
+                  <strong>Tell me more!</strong>
+                </p>
+                <p className={"nearcat-adjacent"}>Sure, grab one of us with a NEAR shirt. We'd love to chat!</p>
+                <p className={"nearcat-adjacent"}>But first, use the button below and see our booth update live.</p>
+              </div>
+            ) : (
+              <div className={"logged-out"}>
+                <p>
+                  NEAR Protocol is a new blockchain focused on developer
+                  productivity and usability. In this demonstration we're going to
+                  interact with the blockchain and see a live change on the
+                  projector at our booth.
+                </p>
+                <p>
+                  <b>So what's going to happen?</b>
+                </p>
+                <p>
+                  You will create a new NEAR account at our Wallet website. After the final step, you'll be redirected back here. There will be a new button where you'll call a smart contract from your new account.
+                </p>
+                <p className={"nearcat-adjacent"}>
+                  You may continue using the button below.
+                </p>
+              </div>
+            )}
+            <img className={"nearcat"} src={nearcat} />
+            </LoadingOverlay>
+          </div>
+            {/*{this.state.completedFinalStep && !this.state.login ? (*/}
+            {this.state.login && !this.state.completedFinalStep && <div id="raffle"><iframe id="gform-iframe" src="https://docs.google.com/forms/d/e/1FAIpQLSeBnedgR2zUCBku2mKnCk27apT-QrusZIuTAiu8l7L83dPjlQ/viewform?embedded=true" width="100%" height="500" frameBorder="0" marginHeight="0" marginWidth="0">Loading…</iframe></div>}
+          <div className={"action-buttons"}>
+            {this.state.login ? (
+              <button onClick={this.joinNear}>Interact with NEAR</button>
             ) : null}{" "}
             {this.state.login ? (
               <button onClick={this.requestSignOut}>Log out</button>
             ) : (
-              <button onClick={this.requestSignIn}>Sure I'll try it!</button>
+              <button onClick={this.requestSignIn}>Create an account with NEAR</button>
             )}
           </div>
-          {/*<div>*/}
-          {/*<p>*/}
-          {/*<span role="img" aria-label="net">*/}
-          {/*🕸*/}
-          {/*</span>{" "}*/}
-          {/*<a className="App-link" href="https://nearprotocol.com">*/}
-          {/*NEAR Website*/}
-          {/*</a>{" "}*/}
-          {/*<span role="img" aria-label="net">*/}
-          {/*🕸*/}
-          {/*</span>*/}
-          {/*</p>*/}
-          {/*<p>*/}
-          {/*<span role="img" aria-label="book">*/}
-          {/*📚*/}
-          {/*</span>*/}
-          {/*<a className="App-link" href="https://docs.nearprotocol.com">*/}
-          {/*{" "}*/}
-          {/*Learn from NEAR Documentation*/}
-          {/*</a>{" "}*/}
-          {/*<span role="img" aria-label="book">*/}
-          {/*📚*/}
-          {/*</span>*/}
-          {/*</p>*/}
-          {/*</div>*/}
+
+          <Modal
+            isOpen={this.state.modalIsOpen}
+            onAfterOpen={this.afterOpenModal}
+            onRequestClose={this.closeModal}
+            style={customStyles}
+            // overlayClassName={"final-overlay"}
+            contentLabel="You've connected with the NEAR blockchain"
+          >
+            <button onClick={this.closeModal} className={"modal-close-button"}>&times;</button>
+            <h2>You've interacted with NEAR</h2>
+            <p>
+              Look for our NEAR Explorer at the booth showing the latest blocks and transactions.
+            </p>
+            <p>See if you can spot your account name. 🙂</p>
+            <p>Our projector live updates upon state change from the contract you just called.</p>
+            <p>Come build projects on NEAR. We're here to help.</p>
+          </Modal>
+        
         </div>
       </div>
     );

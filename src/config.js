@@ -1,4 +1,4 @@
-const CONTRACT_NAME = 'jankcity';
+const CONTRACT_NAME = 'near-booth';
 
 function getConfig(env) {
     switch (env) {

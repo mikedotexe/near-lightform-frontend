@@ -2,3 +2,5 @@ node_modules
 .cache
 out
 dist
+.idea
+.DS_Store
